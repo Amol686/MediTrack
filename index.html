@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MediTrack</title>
+<style>
+:root{--bg:#f5f7fa;--c:#fff;--t:#1d2733;--m:#667585;--a:#1f3a5f;--b:#d6dde6;--r:#c0392b;--g:#1e8449;--y:#b9770e;--rb:#fdecea;--gb:#e9f7ef;--yb:#fef5e7}
+@media(prefers-color-scheme:dark){:root{--bg:#10161d;--c:#18212b;--t:#e6ebf0;--m:#9aa7b4;--a:#6ea8ff;--b:#2b3744;--r:#ff8a7a;--g:#4cc38a;--y:#e5b455;--rb:#3a1f1c;--gb:#16301f;--yb:#33291a}}
+*{box-sizing:border-box}body{margin:0;font:15px/1.45 system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--t)}
+header{background:var(--a);color:#fff;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+@media(prefers-color-scheme:dark){header{color:#10161d}}
+header b{font-size:18px}main{max-width:1050px;margin:0 auto;padding:16px}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}nav a{padding:6px 14px;border:1px solid var(--b);border-radius:20px;color:var(--t);text-decoration:none;background:var(--c)}nav a.on{background:var(--a);color:#fff;border-color:var(--a)}
+@media(prefers-color-scheme:dark){nav a.on{color:#10161d}}
+.card{background:var(--c);border:1px solid var(--b);border-radius:10px;padding:14px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px}.stat{background:var(--c);border:1px solid var(--b);border-radius:10px;padding:12px}.stat b{font-size:24px;display:block}.stat span{color:var(--m);font-size:13px}
+h2,h3,h4{margin:0 0 8px}.wrap{overflow-x:auto}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--b);white-space:nowrap}th{font-size:12px;color:var(--m);text-transform:uppercase}
+button{background:var(--a);color:#fff;border:0;border-radius:6px;padding:7px 12px;font:inherit;cursor:pointer}@media(prefers-color-scheme:dark){button{color:#10161d}}
+button.ghost{background:transparent;color:var(--t);border:1px solid var(--b)}button.bad{background:var(--r)}button:disabled{opacity:.4;cursor:not-allowed}
+input,textarea,select{width:100%;padding:7px;border:1px solid var(--b);border-radius:6px;font:inherit;background:var(--c);color:var(--t)}label{display:block;margin:8px 0;font-size:13px;color:var(--m)}
+.chk{display:flex;gap:8px;align-items:center}.chk input{width:auto}
+.tag{padding:2px 8px;border-radius:10px;font-size:12px;display:inline-block}.red{background:var(--rb);color:var(--r)}.grn{background:var(--gb);color:var(--g)}.yel{background:var(--yb);color:var(--y)}
+.alert{padding:10px 12px;border-radius:8px;margin-bottom:10px}.alert.red{border:1px solid var(--r)}.alert.yel{border:1px solid var(--y)}.alert.grn{border:1px solid var(--g)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}dialog{border:1px solid var(--b);border-radius:12px;padding:18px;width:min(560px,94vw);background:var(--c);color:var(--t)}dialog::backdrop{background:#0008}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);padding:10px 16px;border-radius:8px;background:var(--a);color:#fff;display:none;z-index:9}#toast.bad{background:var(--r)}
+.login{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}.login button{padding:18px;text-align:left}.login small{display:block;opacity:.85;margin-top:4px}
+.bar{height:10px;background:var(--b);border-radius:5px;overflow:hidden;margin:6px 0}.bar i{display:block;height:100%}
+</style></head><body>
+<header><b>MediTrack &middot; Quarantine &amp; Treatment Facility</b><span id="who"></span></header>
+<main id="app"></main><div id="toast"></div><dialog id="dlg"></dialog>
+<script>
+const FEV=100.4,CAP=74,K='meditrack-v1';
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const day=(o=0)=>{const d=new Date(Date.now()+o*864e5);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const nowT=()=>new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+const USERS={admin:'Asha (Admin)',nurse:'Nurse Priya',doctor:'Dr. Rao',management:'Management'};
+function seed(){let s=7;const r=()=>(s=s*16807%2147483647)/2147483647;
+ const F=['Aarav','Diya','Kabir','Meera','Rohan','Sana','Vihaan','Isha','Arjun','Neha','Yash','Tara','Dev','Anika','Kunal','Riya','Manav','Pooja','Samir','Zoya'],L=['Shah','Patil','Khan','Iyer','Mehta','Nair','Joshi','Rao','Gupta','Das'];
+ const S={p:[],ev:[],n:100,user:null};
+ for(let i=1;i<=CAP;i++){const pr=i%6,fe=pr==0?3:pr==1?1:pr==2?2:99,t=[];
+  for(let k=6;k>=1;k--){const f=k>fe;t.push({d:day(-k),t:+(f?100.6+r()*2.6:97.4+r()*1.6).toFixed(1),by:'Nurse Priya',time:'09:15'})}
+  if(r()<.5)t.push({d:day(0),t:+(pr>2?100.8+r()*2:97.6+r()*1.2).toFixed(1),by:'Nurse Priya',time:'09:40'});
+  S.p.push({id:'P-'+(1000+i),name:F[i%20]+' '+L[i%10],age:20+Math.floor(r()*55),phone:'98200'+String(10000+i),room:i,st:'admitted',temps:t,visits:[],treat:'',rec:false});
+  S.ev.push({t:'adm',d:day(-Math.floor(r()*10))})}
+ for(let i=0;i<20;i++){const dead=i<3;S.p.push({id:'P-'+(900+i),name:'Closed case '+(i+1),age:40,phone:'-',room:null,st:dead?'deceased':'recovered',temps:[],visits:[],treat:'',rec:false});
+  S.ev.push({t:'adm',d:day(-20-i)},{t:dead?'dec':'rec',d:day(-Math.floor(r()*28))})}
+ return S}
+let S;try{S=JSON.parse(localStorage.getItem(K))}catch(e){}if(!S)S=seed();
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+const get=id=>S.p.find(p=>p.id==id),adm=()=>S.p.filter(p=>p.st=='admitted');
+const rd=(p,d)=>{const a=p.temps.filter(t=>t.d==d);return a[a.length-1]},fev=t=>t>=FEV;
+const streak=p=>{let o=rd(p,day(0))?0:-1,c=0;for(;;o--){const r=rd(p,day(o));if(!r||fev(r.t))break;c++}return c};
+const visited=p=>p.visits.find(v=>v.d==day(0));
+const freeRoom=()=>{const u=new Set(adm().map(p=>p.room));for(let i=1;i<=CAP;i++)if(!u.has(i))return i;return 0};
+function toast(m,bad){const t=$('#toast');t.textContent=m;t.className=bad?'bad':'';t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',3200)}
+const openD=h=>{$('#dlg').innerHTML=h;$('#dlg').showModal()};
+const role=()=>S.user,go=r=>{location.hash='#'+r;render()};
+function hist(p){const a=p.temps.slice(-8).reverse();return a.length?`<div class=wrap><table><tr><th>Date</th><th>Time</th><th>°F</th><th>By</th><th>Note</th></tr>${a.map(t=>`<tr><td>${t.d}</td><td>${t.time}</td><td><span class="tag ${fev(t.t)?'red':'grn'}">${t.t}</span></td><td>${esc(t.by)}</td><td>${esc(t.reason||'')}</td></tr>`).join('')}</table></div>`:'<p>No readings yet.</p>'}
+const tTag=p=>{const r=rd(p,day(0));return r?`<span class="tag ${fev(r.t)?'red':'grn'}">${r.t}°F${fev(r.t)?' fever':''}</span>`:'<span class="tag yel">Pending</span>'};
+
+/* ---------- views ---------- */
+const V={
+admin(){const a=adm(),pend=a.filter(p=>p.rec),free=CAP-a.length;
+ return `${free==0?'<div class="alert red"><b>No rooms available.</b> All 74 rooms are occupied. Confirm a discharge to free a room.</div>':''}
+ ${pend.length?`<div class="alert yel">${pend.length} discharge approval(s) pending.</div>`:''}
+ <div class=grid><div class=stat><b>${a.length}/${CAP}</b><span>Rooms occupied</span></div><div class=stat><b>${free}</b><span>Rooms free</span></div><div class=stat><b>${pend.length}</b><span>Discharge recommended</span></div><div class=stat><b>${S.p.filter(p=>p.st!='admitted').length}</b><span>Closed cases</span></div></div>
+ <div class=card><h3>Register new patient</h3><div class=grid><label>Name*<input id=rn></label><label>Age*<input id=ra type=number min=0 max=120></label><label>Emergency contact*<input id=rp></label></div><button onclick=reg()>Register &amp; assign room</button></div>
+ <div class=card><h3>Discharge recommended by doctors</h3>${pend.length?`<div class=wrap><table><tr><th>ID</th><th>Patient</th><th>Room</th><th></th></tr>${pend.map(p=>`<tr><td>${p.id}</td><td>${esc(p.name)}</td><td>${p.room}</td><td><button onclick="disch('${p.id}')">Confirm discharge</button></td></tr>`).join('')}</table></div>`:'<p>None pending.</p>'}</div>
+ <div class=card><h3>Admitted patients</h3><div class=wrap><table><tr><th>ID</th><th>Name</th><th>Age</th><th>Room</th></tr>${a.map(p=>`<tr><td>${p.id}</td><td>${esc(p.name)}</td><td>${p.age}</td><td>${p.room}</td></tr>`).join('')}</table></div></div>
+ <div class=card><h3>Discharged / closed</h3><div class=wrap><table><tr><th>ID</th><th>Name</th><th>Outcome</th></tr>${S.p.filter(p=>p.st!='admitted').slice(-12).reverse().map(p=>`<tr><td>${p.id}</td><td>${esc(p.name)}</td><td>${p.st=='recovered'?'Recovered / discharged':'Deceased'}</td></tr>`).join('')}</table></div></div>`},
+nurse(){const a=adm().sort((x,y)=>!rd(x,day(0))-!rd(y,day(0))||x.room-y.room),pend=a.filter(p=>!rd(p,day(0)));
+ return `${pend.length?`<div class="alert yel"><b>${pend.length} temperature check(s) pending today.</b></div>`:'<div class="alert grn">All temperature checks done for today.</div>'}
+ <div class=card><h3>Today's temperature round</h3><div class=wrap><table><tr><th>Room</th><th>Patient</th><th>Today</th><th></th></tr>${a.map(p=>`<tr><td>${p.room}</td><td>${esc(p.name)}</td><td>${tTag(p)}</td><td><button class="${rd(p,day(0))?'ghost':''}" onclick="recDlg('${p.id}')">${rd(p,day(0))?'Correct / view':'Record'}</button></td></tr>`).join('')}</table></div></div>`},
+doctor(){const a=adm().sort((x,y)=>(streak(y)>=3)-(streak(x)>=3)||!visited(x)-!visited(y)),el=a.filter(p=>streak(p)>=3&&!p.rec),vp=a.filter(p=>!visited(p));
+ return `${el.length?`<div class="alert grn"><b>${el.length} patient(s) completed 3 fever-free days</b> - review and recommend discharge.</div>`:''}
+ <div class="alert yel">${vp.length} visit(s) pending today &middot; ${a.filter(p=>!rd(p,day(0))).length} without a temperature yet.</div>
+ <div class=card><h3>Patients</h3><div class=wrap><table><tr><th>Room</th><th>Patient</th><th>Temp today</th><th>Fever-free days</th><th>Visit</th><th></th></tr>${a.map(p=>{const s=streak(p);return `<tr><td>${p.room}</td><td>${esc(p.name)}</td><td>${tTag(p)}</td><td><span class="tag ${s>=3?'grn':''}">${s}</span></td><td>${visited(p)?'<span class="tag grn">Done</span>':'<span class="tag yel">Pending</span>'}${p.rec?' <span class="tag grn">Recommended</span>':''}</td><td><button onclick="visDlg('${p.id}')">Open</button></td></tr>`}).join('')}</table></div></div>`},
+management(){const rec=S.p.filter(p=>p.st=='recovered').length,dec=S.p.filter(p=>p.st=='deceased').length,out=rec+dec,mr=out?dec/out*100:0,rr=out?rec/out*100:0,a=adm().length;
+ const rep=(n,l)=>{const f=S.ev.filter(e=>e.d>=day(-n));return `<tr><td>${l}</td><td>${f.filter(e=>e.t=='adm').length}</td><td>${f.filter(e=>e.t=='rec').length}</td><td>${f.filter(e=>e.t=='dec').length}</td></tr>`};
+ return `${out>=10&&mr>15?`<div class="alert red"><b>Mortality rate has crossed 15%</b> (${mr.toFixed(1)}%). Review treatment quality.</div>`:'<div class="alert grn">Mortality is within the expected 15% benchmark.</div>'}
+ <div class=grid><div class=stat><b>${a}/${CAP}</b><span>Current occupancy</span></div><div class=stat><b>${mr.toFixed(1)}%</b><span>Mortality (benchmark 15%)</span></div><div class=stat><b>${rr.toFixed(1)}%</b><span>Recovery (benchmark 85%)</span></div><div class=stat><b>${out}</b><span>Closed outcomes</span></div></div>
+ <div class=card><h3>Performance vs benchmark</h3>Recovery ${rr.toFixed(1)}% of 85%<div class=bar><i style="width:${Math.min(100,rr)}%;background:var(--g)"></i></div>Mortality ${mr.toFixed(1)}% of 15%<div class=bar><i style="width:${Math.min(100,mr/15*100)}%;background:var(--r)"></i></div><small>Alert fires only after at least 10 closed outcomes.</small></div>
+ <div class=card><h3>Reports</h3><div class=wrap><table><tr><th>Period</th><th>Admissions</th><th>Discharges (recovered)</th><th>Deaths</th></tr>${rep(0,'Daily')}${rep(6,'Weekly')}${rep(29,'Monthly')}</table></div></div>`}};
+
+/* ---------- actions ---------- */
+function reg(){const n=$('#rn').value.trim(),a=+$('#ra').value,p=$('#rp').value.trim();
+ if(!n||!a||a<0||a>120||!p)return toast('Name, valid age and emergency contact are required.',1);
+ const rm=freeRoom();if(adm().length>=CAP||!rm)return toast('No rooms available. Discharge a patient first.',1);
+ const id='P-'+(S.n++);S.p.push({id,name:n,age:a,phone:p,room:rm,st:'admitted',temps:[],visits:[],treat:'',rec:false});S.ev.push({t:'adm',d:day(0)});save();render();toast(`Registered ${id}, assigned room ${rm}.`)}
+function disch(id){const p=get(id);if(!p.rec)return;p.st='recovered';p.room=null;S.ev.push({t:'rec',d:day(0)});save();render();toast('Discharged. Room is now available.')}
+function recDlg(id){const p=get(id),r=rd(p,day(0));
+ openD(`<h3>Record temperature</h3><p>${esc(p.name)} &middot; Room ${p.room}</p>${r?`<div class="alert yel">Already recorded today (${r.t}°F at ${r.time}). A new reading needs a reason.</div>`:''}
+ <label>Temperature (°F)<input id=tv type=number step=0.1 min=90 max=110 autofocus></label>${r?'<label>Reason for new reading*<input id=rs></label>':''}
+ <h4>Recent readings</h4>${hist(p)}<div class=row><button onclick="saveT('${id}')">Save reading</button><button class=ghost onclick="dlg.close()">Cancel</button></div>`)}
+function saveT(id){const p=get(id),r=rd(p,day(0)),v=parseFloat($('#tv').value),rs=r?$('#rs').value.trim():'';
+ if(!(v>=90&&v<=110))return toast('Enter a temperature between 90 and 110 °F.',1);
+ if(r&&!rs)return toast('A reason is required for a second reading today.',1);
+ if(r&&!confirm('A reading already exists for today. Save another?'))return;
+ p.temps.push({d:day(0),t:v,by:USERS.nurse,time:nowT(),reason:rs});save();dlg.close();render();toast(fev(v)?`Saved: ${v}°F - fever flagged for doctor.`:`Saved: ${v}°F.`,fev(v))}
+function visDlg(id){const p=get(id),r=rd(p,day(0)),v=visited(p),s=streak(p);
+ openD(`<h3>${esc(p.name)} &middot; Room ${p.room}</h3><p>Today: ${tTag(p)} &middot; Fever-free days: <b>${s}</b>${r?'':'<br><span class="tag yel">Nurse has not recorded a temperature yet</span>'}</p>
+ <h4>Temperature history</h4>${hist(p)}
+ ${v?`<div class="alert grn">Visit recorded today: ${esc(v.notes)}${v.emerg?' (emergency exception)':''}</div>`:`<label>Examination notes*<textarea id=nt rows=3></textarea></label>${r?'':'<label class=chk><input type=checkbox id=em> Emergency: examine before temperature is recorded</label>'}`}
+ <label>Treatment details<textarea id=tr rows=2>${esc(p.treat)}</textarea></label>
+ <div class=row>${v?`<button onclick="treat('${id}')">Update treatment</button>`:`<button onclick="saveV('${id}')">Save visit</button>`}
+ <button ${s>=3&&!p.rec?'':'disabled'} onclick="recommend('${id}')">Recommend discharge</button><button class="bad" onclick="died('${id}')">Record death</button><button class=ghost onclick="dlg.close()">Close</button></div>`)}
+function saveV(id){const p=get(id),r=rd(p,day(0)),n=$('#nt').value.trim(),em=$('#em')&&$('#em').checked;
+ if(visited(p))return toast('A visit is already recorded today.',1);
+ if(!n)return toast('Examination notes are required.',1);
+ if(!r&&!em)return toast("Today's temperature is pending. Tick the emergency exception to proceed.",1);
+ p.visits.push({d:day(0),notes:n,emerg:!r&&em,by:USERS.doctor});p.treat=$('#tr').value.trim();save();dlg.close();render();toast(em&&!r?'Visit saved. Temperature check stays pending.':'Visit saved.')}
+function treat(id){get(id).treat=$('#tr').value.trim();save();toast('Treatment updated.')}
+function recommend(id){const p=get(id);if(streak(p)<3)return;p.rec=true;save();dlg.close();render();toast('Discharge recommended. Admin notified.')}
+function died(id){if(!confirm('Record this patient as deceased? This frees the room.'))return;const p=get(id);p.st='deceased';p.room=null;S.ev.push({t:'dec',d:day(0)});save();dlg.close();render();toast('Outcome recorded.')}
+
+/* ---------- shell ---------- */
+function render(){const app=$('#app'),u=role();$('#who').innerHTML=u?`${esc(USERS[u])} <button class=ghost style="color:inherit;border-color:#fff8" onclick="out()">Sign out</button>`:'';
+ if(!u){app.innerHTML=`<div class=card><h2>Sign in</h2><p>Demo prototype. Choose a user to log in. Data is stored in this browser only.</p><div class=login>${Object.keys(USERS).map(r=>`<button onclick="login('${r}')"><b>${USERS[r]}</b><small>${{admin:'Register, assign rooms, discharge',nurse:'Record daily temperatures',doctor:'Visits, treatment, discharge recommendation',management:'Reports and performance'}[r]}</small></button>`).join('')}</div></div>`;return}
+ const v=location.hash.slice(1)||u;
+ app.innerHTML=`<nav>${Object.keys(USERS).map(r=>`<a href="#${r}" class="${v==r?'on':''}" onclick="setTimeout(render)">${r[0].toUpperCase()+r.slice(1)}</a>`).join('')}<a href="#" onclick="resetDemo();return false" style="margin-left:auto">Reset demo data</a></nav>`+
+ (v==u?V[u]():`<div class="card alert red"><h3>Access denied</h3>Your role (${u}) does not have access to this section.</div>`)}
+function login(r){S.user=r;save();location.hash='#'+r;render()}
+function out(){S.user=null;save();location.hash='';render()}
+function resetDemo(){if(confirm('Reset all demo data?')){localStorage.removeItem(K);S=seed();render()}}
+window.addEventListener('hashchange',render);render();
+</script></body></html>
